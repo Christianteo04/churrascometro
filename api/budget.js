@@ -1,6 +1,8 @@
 // Vercel Serverless Function - Protege a API Key do Gemini
 // Esta função roda no servidor, não expondo a key para o frontend
 
+import { GoogleGenAI } from "@google/genai";
+
 export default async function handler(req, res) {
   // Apenas POST
   if (req.method !== 'POST') {
@@ -49,29 +51,20 @@ export default async function handler(req, res) {
       Seja realista com a inflação atual de carnes e bebidas no Brasil em ${new Date().getFullYear()}.
     `;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { 
-            responseMimeType: 'application/json',
-            temperature: 0.7
-          }
-        }),
+    // Inicializa o cliente do Google Generative AI
+    const ai = new GoogleGenAI({ apiKey });
+
+    // Chama a API usando o SDK
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.7
       }
-    );
+    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error:', errorText);
-      throw new Error('Falha na API do Gemini');
-    }
-
-    const data = await response.json();
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const textResponse = response.text;
     
     if (!textResponse) {
       throw new Error('Resposta vazia do Gemini');
